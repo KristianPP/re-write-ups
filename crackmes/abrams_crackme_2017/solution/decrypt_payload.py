@@ -96,7 +96,7 @@ def decryptor(crackme_file):
                                   payload)))
 
     print ("Write down the decrypted paload in executable. Mind that when writing,\n"
-           "you write with 0x0 base offseet not 0x%08x so we have to extract it..") % base
+           "you write with 0x0 base offseet not 0x%08x so we have to fix it..") % base
 
     cmd("s 0x%x" % (base_offset - base))
     cmd("wf %s" % payload_file)
