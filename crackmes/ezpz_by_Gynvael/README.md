@@ -1,6 +1,6 @@
 # ezpz by Gynvael
 
-This crackme is from Gynvael's https://www.youtube.com/watch?v=JExnV1-GNxk . The solution script can be
+This crackme is from Gynvael's [Hacking Livestream #1: ReRe and EZPZP](https://www.youtube.com/watch?v=JExnV1-GNxk). The solution script can be
 used either statically:
 
 ```bash
