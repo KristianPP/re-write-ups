@@ -1,7 +1,7 @@
 # ezpz by Gynvael
 
 This crackme is from Gynvael's https://www.youtube.com/watch?v=JExnV1-GNxk . The solution script can be
-used either statically:
+used either statically or dynamic:
 
 ```bash
 ./ezpz_solution -f ezpz
