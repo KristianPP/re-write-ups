@@ -119,7 +119,16 @@ At offset 0x004009e7 there is a byte XOR with 0xc.
 The source and destination used are at the [base+counter] offset.
 Obviously this is a decryption cycle. The loop ends when 'edx' reaches 0x2d2
 Next we write a simple decryption routine in Python with r2pipe
-and write it down to the executable..
+and write it down to the executable:
+
+```python
+def bytes2str(bytes):
+    return "".join([chr(i) for i in bytes])
+
+xor_val = 0xc
+payload = cmdj("pcj 0x%x @ 0x%x" % (end_count, base_offset))
+open(payload_file, "w").write(bytes2str(map(lambda a: a ^ xor_val, payload)))
+```
 
 I use payload.decr.bin file for decrypted payload to write down
 the decrypted paload in executable. Mind that when writing,
