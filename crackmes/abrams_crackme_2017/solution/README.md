@@ -145,3 +145,128 @@ the payload inside the executable is used to ease the later analysis in order to
 preserve references and symbols.
 
 ### Analysis of payload
+
+Now we have everything decrypted. We open the decrypted executable with:
+
+```
+r2 -w ./abrams_crackme_2017.decrypted
+```
+
+We saw previously that there is a decryption loop that stores a payload base address
+at 'eax'. Lets go to see the address (0x00400570):
+
+```
+[r2]> s 0x00400570
+```
+
+Analyse function at current offset:
+
+```
+[r2]> af
+```
+
+and dissasemble it:
+
+```
+[r2]> pdf
+
+          ;-- section_end..plt:
+            ;-- section..text:
+/ (fcn) fcn.00400570 43
+|   fcn.00400570 ();
+|           0x00400570      31ed           xor ebp, ebp                ; section 13 va=0x00400570 pa=0x00000570 sz=722 vsz=722 rwx=--rwx .text
+|           0x00400572      4989d1         mov r9, rdx
+|           0x00400575      5e             pop rsi
+|           0x00400576      4889e2         mov rdx, rsp
+|           0x00400579      4883e4f0       and rsp, 0xfffffffffffffff0
+|           0x0040057d      50             push rax
+|           0x0040057e      54             push rsp
+|           0x0040057f      49c7c0400840.  mov r8, 0x400840
+|           0x00400586      48c7c1d00740.  mov rcx, 0x4007d0
+|           0x0040058d      48c7c74c0740.  mov rdi, 0x40074c
+|           0x00400594      ff15560a2000   call qword [reloc.__gmon_start___240] ; [0x600ff0:8]=0
+\           0x0040059a      f4             hlt
+```
+
+We can see this is the standard entry code of an ELF executable
+linked to the standard library libc. Linked to libc libraries does not execute
+the 'main()' function right at the program's entrypoint. This [article](http://dbp-consulting.com/tutorials/debugging/linuxProgramStartup.html)
+describes in detail how the linker calls our 'main()' funciton.
+
+Knowing how the linker works, we can see that the call to __gmon_start___240 has a pointer
+to the 'main()' function. In x64 under Linux the function arguments are passed through the
+registers rdi, rsi, rdx, rcx, r8, r9, <stack> in the same order. So 'rdi' has our pointer - 0x40074c.
+
+```
+[r2]> s 0x0040074c
+[r2]> af
+[r2]> pdf
+
+/ (fcn) fcn.0040074c 124
+|   fcn.0040074c ();
+|           ; var int local_4h @ rbp-0x4
+|           ; var int local_0h @ rbp-0x0
+|              ; DATA XREF from 0x0040058d (fcn.00400570)
+|           0x0040074c      55             push rbp
+|           0x0040074d      4889e5         mov rbp, rsp
+|           0x00400750      4883ec10       sub rsp, 0x10
+|           0x00400754      c745fc010000.  mov dword [local_4h], 1
+|           0x0040075b      b900000000     mov ecx, 0
+|           0x00400760      ba00000000     mov edx, 0
+|           0x00400765      be00000000     mov esi, 0
+|           0x0040076a      bf00000000     mov edi, 0
+|           0x0040076f      b800000000     mov eax, 0
+|           0x00400774      e8c7fdffff     call sym.imp.ptrace
+|           0x00400779      4883f8ff       cmp rax, -1
+|       ,=< 0x0040077d      7507           jne 0x400786
+|       |   0x0040077f      b8ffffffff     mov eax, 0xffffffff         ; -1
+|      ,==< 0x00400784      eb40           jmp 0x4007c6
+|      |`-> 0x00400786      b800000000     mov eax, 0
+|      |    0x0040078b      e8d6feffff     call 0x400666
+|      |    0x00400790      85c0           test eax, eax
+|      |,=< 0x00400792      7407           je 0x40079b
+|      ||   0x00400794      b8ffffffff     mov eax, 0xffffffff         ; -1
+|     ,===< 0x00400799      eb2b           jmp 0x4007c6
+|     ||`-> 0x0040079b      b800000000     mov eax, 0
+|     ||    0x004007a0      e8c1feffff     call 0x400666
+|     ||    0x004007a5      837dfc00       cmp dword [local_4h], 0
+|     ||,=< 0x004007a9      750c           jne 0x4007b7
+|     |||   0x004007ab      bf65084000     mov edi, str.cracked        ; 0x400865 ; "cracked"
+|     |||   0x004007b0      e85bfdffff     call sym.imp.puts
+|    ,====< 0x004007b5      eb0a           jmp 0x4007c1
+|    |||`-> 0x004007b7      bf6d084000     mov edi, str.not_cracked    ; 0x40086d ; "not cracked"
+|    |||    0x004007bc      e84ffdffff     call sym.imp.puts
+|    |||       ; JMP XREF from 0x004007b5 (fcn.0040074c)
+|    `----> 0x004007c1      b800000000     mov eax, 0
+|     ||       ; JMP XREF from 0x00400799 (fcn.0040074c)
+|     ||       ; JMP XREF from 0x00400784 (fcn.0040074c)
+|     ``--> 0x004007c6      c9             leave
+\           0x004007c7      c3             ret
+```
+
+There is Linux anti-debugging logic in this function. The call to ptrace is used
+for self-tracing which is a well known trick to prevent a debugger from attaching.
+
+What we can see at 0x00400754 is a local variable equal to 0x1
+and it is compared with 0x0 at 0x004007a5. The jump must not be taken in order to
+to print 'cracked'. So we must patch the byte at 0x00400754 + 0x3 with 0x0.
+0x0 XORed with anything is 'anything' so it is the easiest patch possible and we can apply
+it to the original (don't forget the base calculation):
+
+abrams_crackme_2017-patch.r2:
+
+```
+s 0x00000757
+wx 0c
+```
+
+Apply patch as:
+
+```
+$> r2 -w -i ./crack-patch.r2 ./abrams_crackme_2017
+```
+
+## References
+
+* http://dbp-consulting.com/tutorials/debugging/linuxProgramStartup.html
+* http://stackoverflow.com/a/4266083/713289
