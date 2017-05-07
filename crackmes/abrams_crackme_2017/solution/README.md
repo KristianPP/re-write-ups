@@ -251,7 +251,8 @@ What we can see at 0x00400754 is a local variable equal to 0x1
 and it is compared with 0x0 at 0x004007a5. The jump must not be taken in order to
 to print 'cracked'. So we must patch the byte at 0x00400754 + 0x3 with 0x0.
 0x0 XORed with anything is 'anything' so it is the easiest patch possible and we can apply
-it to the original (don't forget the base calculation):
+it to the original (don't forget the base calculation). Our initial XOR key was 0xc 
+(from offset 0x004009e7):
 
 abrams_crackme_2017-patch.r2:
 
