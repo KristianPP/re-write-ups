@@ -52,13 +52,14 @@ Analyse current function
 ```
 
 Hm, a syscall:
-* syscall no: rax=0xa (__NR_unlink)
-* param1: rdi=sym.imp.__gmon_start__
-* param2: rsi=0x842
-* param3: rdx=7
+* syscall no: rax=0xa (#define __NR_mprotect 10) from <unistd_64.h>
+* param1: rdi=sym.imp.__gmon_start__ (void *addr)
+* param2: rsi=0x842 (size_t len)
+* param3: rdx=7 (int prot) = read+write+exec
 
-This syscall does not make sense, cause there is no string at the offset!
-Probably it is used as NOP.
+This gives write permissions to the program segment where .text is.
+It is necessary when you have self-modifying code.
+
 I think the analysis has missed a few bytes. Lets print the blcok:
 
 ```

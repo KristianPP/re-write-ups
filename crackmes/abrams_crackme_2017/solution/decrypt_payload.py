@@ -49,13 +49,14 @@ def decryptor(crackme_file):
     cmd("pdf")
 
     print "Hm, a syscall:"
-    print "   syscall no: rax=0xa (__NR_unlink)"
-    print "   param1: rdi=sym.imp.__gmon_start__"
-    print "   param2: rsi=0x842"
-    print "   param3: rdx=7"
+    print "* syscall no: rax=0xa (#define __NR_mprotect 10) from <unistd_64.h>"
+    print "* param1: rdi=sym.imp.__gmon_start__ (void *addr)"
+    print "* param2: rsi=0x842 (size_t len)"
+    print "* param3: rdx=7 (int prot) = read+write+exec"
     print
-    print "This syscall does not make sense!"
-    print "Probably it is used as NOP."
+    print "This gives write permissions to the program segment where .text is."
+    print "It is necessary when you have self-modifying code."
+    print
     print "I think the analysis has missed a few bytes. Lets print the blcok .."
     print
 
