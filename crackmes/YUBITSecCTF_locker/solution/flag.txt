@@ -1,0 +1,15 @@
+Give me the password
+346426509
+Congrats! The flag is YUBITSEC{679884941346426509}
+
+Give me the password
+432513869
+Congrats! The flag is YUBITSEC{367931213432513869}
+
+Give me the password
+713532237
+Congrats! The flag is YUBITSEC{1504587597713532237}
+
+...
+
+and many others :)
